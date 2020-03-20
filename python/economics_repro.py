@@ -6,8 +6,9 @@ Created on Mon Mar 16 15:46:45 2020
 @author: laura, sarah
 """
 #Idee: Heterogene Agenten mit unterschiedlichem Nutzen
-
+import sys; sys.path.insert(0, './python')
 import numpy as np
+from economists import Economist # Wenn ihr eine andere Klasse aus diesem File verwenden wollt, müsst ihr sie explizit importieren
 
 #Hier Teil 0 des Modells: Institutionen?!
  
@@ -15,7 +16,7 @@ import numpy as np
  # TODO CG: Ich würde mir angewöhnen nach 80 ZEichen einen Zeilenumbruch zu machen, dann ist der Code, insb. auf dem Laptop, besser lesbar (Ausnahme: TODOs)
  
 class Scientific_Institutions: 
-    """Governs academit power and produces network value # TODO CG: Immer gut die erste Zeile ganz kurz, und dann eine genauere Beschreibung im nächsten Absatz zu haben; das macht es neuen Leser*innen deutlich einfacher
+    """Governs academit power and produces network value 
     
     The class in which academic power and thus the network value is produced 
     and assigned to each paradigm
@@ -42,117 +43,38 @@ class Scientific_Institutions:
     def __init__(self, n_economists, n_paradigm): 
         self.n_economists = n_economists
         self.n_paradigm = n_paradigm
-        self.economists = [Economists(k) for k in range(n_economists)]
-        self.paradigm = [Paradigm(j) for j in range(n_paradigm)] # TODO CG würde ich anders benennen, siehe zeile 50
+        self.paradigms = [Paradigm(
+            name=j, 
+            network_value=0, 
+            paradigmatic_dominance=0) for j in range(n_paradigm)] 
+        # TODO Über Relevanz von paradigmatic_dominance reden
+        self.economists = [Economist(
+            name=k, 
+            intrinsic_value_list=0, 
+            n_paradigm=self.n_paradigm, 
+            paradigms_given=self.paradigms) for k in range(n_economists)]
     
-    def academic_power(self):
+    def update_academic_power(self):
+        """Sets academic power for all paradigms.
+        
+        [Was ist AP und wie wird es hergestellt.
+        """
         #loop über paradigma/dann über Agenten 
-        for paradigm in self.paradigm:  # TODO CG: um verwirrung zu vermeiden würde ich hier immer unterschiedliche Namen verwenden, also eher: for paradigm in self.paradigms (und das dann natürlich in zeile 46 auch anders nennen)
+        for p in self.paradigms:  
             counter = 0  
-            for economist in self.economists: 
-                if Economists.current_paradigm == paradigm.name: 
+            for e in self.economists: 
+                if e.current_paradigm == p.name: 
                     counter +=1 
             share = counter/self.n_economists
-            paradigm.set_academic_power(share)      
+            p.set_academic_power(share)      
         
     def network_value(self):
-        for t in self.paradigm: 
+        for t in self.paradigms: 
             t.network_value = t.academic_power**4
        
 
 #Hier Teil 1 des Modells: Die Agentenklasse
-class Economists: # TODO Das wäre ein klassisches Beispiel für Code, den man in ein eigenes File packt; würde ich übrigens "Economist" nennen, ist dann einfacher Mehrzahl (bei Listen von Instanzen) und Einzahl (bei einer einzelnen Instanz) getrettn zu halten, siehe z.B. Zeile 45
-    """A single economist
-    
-    Chooses a paradigm, depending on own preferences and academic power expressed in network value.
-    
-    Attributes
-    ----------
-    academic power : set
-        Academic power of a paradigm relevant for the technology choice of this agent.
-        
-    current_paradigm : int
-        The paradigm chosen by the agent. `None` in the beginning, then 0 or 1
-    
-    network_value : set
-        correlates with academic power of a paradigm
-        
-    paradigmatic_dominance : set
-        assigns a value to a paradigm according to its academic power- in relation to other's paradigms' academic power
-    
-    individul_utility : list
-        
-    
-    Methods
-    --------
-    intrinsic_value_list
-        assigns randomly generated values as intrinsic values to a paradigm for each economist
-        
-    choose_paradigm
-        Chooses a technology based on own preferences and academic power of a paradigm (and association to a certain 
-        subclass of economists)
-        
-    get_paradigm
-        Returns the chosen paradigm.
-    
-    utility
-        calculates the individual utility for each subclass of Economists as a sum = k*intrinsic_value + l*network value.
-        Each subclass has a specified k and j.
-    """
-    
-    def __init__(self, name, intrinsic_value_list, n_paradigm): 
-        self.name = name
-        self.current_paradigm = None 
-        self.intrinsic_value_list = self.set_intrinsic_value_list() # TODO CG: Siehe Kommentar unten: der Name der Funktion darf nicht gleich dem Namen des Atributs sein; streng genommen bräuchte es hier keine Methode, aber ich habe sie nur mal umbenannt damit es geht (siehe Kommentar unten); wenn ihr es aber als Funktion lassen woll, dann solltet ihr es in init als Argument rausnehmen!
-        self.individul_utility_list = np.zeros(n_paradigm)
 
-    # TODO CG: Achtung, ihr dürft eine Methode nicht so nennen wie ein Attribut. Bei euch gibt es ein Attribut "self.instrinsic_value_list" und eine Funktion mit dem gleichen Namen. Das geht nicht. Zudem solltet ihr alle Attribue möglichst schon in __init__ erstellen und dann später ändern, dann weiß man durch Blick in __init__ was die Klasse alles für Attribute hat
-    # TODO CG: Damit es geht habe ich die Funktion in set_intrinsic_value_list umbenannt
-    def set_intrinsic_value_list(self):
-        self.instrinsic_value_list = np.random.uniform(0,1)
-        
-    def choose_paradigm(self):
-        maximal_utility = np.argmax(self.individul_utility_list)
-        self.current_paradigm = maximal_utility
-    
-    def get_paradigm(self):
-        return self.current_paradigm
-
-class Career(Economists): # TODO CG Solche 'Kinder' einer Klasse können entweder in das File von Economists, oder in ein separates; bei solchen kleinen Definitionen würde ich es erstmal in das gleiche File packen
-    def __init__(self,carrierists, name, intrinsic_value_list, n_paradigm):
-        super().__init__(self, name, intrinsic_value_list, n_paradigm)
-        assert isinstance(carrierists, list)
-        for m in carrierists: 
-            assert isinstance(m, Economists)
-            
-    def utility(self, network_value_list): # TODO CG: Würde hier immer einen kurzen Docstring schreiben und das Ergebnis der Funktion explizit mit return() zurückgeben
-        for i in range(len(self.individul_utility_list)): # TODO CG: hier hat die range() Funktion gefehlt; len() gibt nur eine einzige Zal aus, darüber kann man nicht loopen
-            self.individul_utility_list[i] = (self.intrinsic_value_list[i])*0 + (network_value_list[i])*1 # TODO CG: was soll das Multiplizieren mit Null? Warum steht es da überhaupt?        
-            
-            
-class Idealism(Economists): 
-    def __init__(self,idealists, name, intrinsic_value_list, n_paradigm):
-        super().__init__(self, name, intrinsic_value_list, n_paradigm)
-        assert isinstance(idealists, list)
-        for m in idealists: 
-            assert isinstance(m, Economists)
-            
-    def utility(self, network_value_list):
-        for i in range(len(self.individul_utility_list)): # TODO CG: hier wieder range() vergessen
-            self.individul_utility_list[i] = (self.intrinsic_value_list[i])*1 + (network_value_list[i])*0
-
-
-class The_mass(Economists): 
-    def __init__(self,normals, name, intrinsic_value_list, n_paradigm):
-        super().__init__(self, name, intrinsic_value_list, n_paradigm)
-        assert isinstance(normals, list)
-        for m in normals: 
-            assert isinstance(m, Economists)
-            
-    def utility(self, network_value_list):
-        for i in range(len(self.individul_utility_list)):  # TODO CG: hier wieder range() vergessen
-            self.individul_utility_list[i] = (self.intrinsic_value_list[i])*0.4 + (network_value_list[i])*0.6
-            
             
 class Paradigm: # paradigmatic dominance mit network value verbinden?
     def __init__(self, name, network_value, paradigmatic_dominance): 
@@ -160,6 +82,20 @@ class Paradigm: # paradigmatic dominance mit network value verbinden?
         #self.intrinsic_value = intrinsic_value
         self.network_value = 0 
         self.paradigmatic_dominance = 0
+        self.academic_power = None
+        
+    def set_academic_power(self, power_value):
+        """Sets academic power
+        
+        [extended_summary]
+        
+        Parameters
+        ----------
+        power_value : float
+            The power of the paradigm, depends on the share of econs
+            currently affiliated with it
+        """
+        self.academic_power = power_value
         
     def set_network_value(self, network_value): 
         self.network_value = network_value
@@ -217,18 +153,21 @@ class Model:
             Will be reported in the results.
         """
         self.identifier = identifier
-        self.economistlist = [economist.Economist() for i in range(n_economists)] # TODO CG: da ihr das nicht über verschiedene Files gelöst habt, funktioniert das so nicht. Dazu müsstet ihr oben das Modul economist importiert haben (und dazu eine Datei economist.py in eurem Arbeitsverzeichnis haben)
+        self.economistlist = [Economist() for i in range(n_economists)] # TODO CG: funktioniert noch nicht, siehe oben bei den Institutionen, so müssen die Econs erstellt werden
         self.time = 0
-        self.subscripts_p0 = [0]
-        self.subscripts_p1 = [0]
+        # TODO Hier die Listen für die Statusvariablen definieren
+        self.follower_paradigm_1 = [0] # Vielleicht besser als dict?
+        self.follower_paradigm_2 = [0]
 
             
     def run(self):
         """Runs the model.
+        
         Shuffles the list of economists, then one economist after the other
         chooses her paradigm.
         """
         print("Start running the model!")
+        # TODO Hier sollten wohl die Timesteps eingefügt werden
         np.random.shuffle(self.economistlist)
         for a in self.economistlist:
             self.time += 1
